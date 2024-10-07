@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8" />
+<title>Using CCS Debug for Development</title>
+</head>
+
+<!-- START PRE -->
+<link rel="stylesheet" href="../../.metadata/.html/scripts/strapdown/v/0.2/fonts/ubuntu-regular-woff.css"/>
+<link rel="stylesheet" href="../../.metadata/.html/scripts/strapdown/v/0.2/fonts/glyphicons-halflings-regular.css"/>
+<link rel="stylesheet" href="../../.metadata/.html/scripts/strapdown/v/0.2/themes/united2.min.css"/>
+<link rel="stylesheet" href="../../.metadata/.html/scripts/strapdown/v/0.2/themes/bootstrap-responsive.min.css"/>
+<link rel="stylesheet" href="../../.metadata/.html/scripts/strapdown/v/0.2/strapdown.css"/>
+<link rel="stylesheet" href="../../.metadata/.html/styles/link.css"/>
+<!-- END PRE -->
+
+<xmp style="display:none;" class="col-xs-6">
+
+# Overview
+
+    This mode should be used when debugging with CCS is involved and/or developing an mmWave application where the .bin files keep
+    changing constantly and frequent flashing of image onto the board is not desirable. This mode allows you to flash once and then use CCS to
+    download a different image to the device's RAM on every boot.
+
+# 0. Requirements
+
+    * PC with:
+      * Recommended OS: Windows 7 or 10
+      * Code Composer Studio (version as specified in demo User's Guide)
+      * mmWave SDK installed (version as specified in demo User's Guide)
+    * The EVM should already be setup for **Flashing Mode** according to the appropriate [hardware setup guides](../hardware_guides/evm_setup_operational_modes.html) for your EVM:  
+    
+
+    EVM                           | Guide          
+    ------------------------------|--------------------------------------------------
+    IWR6843ISK, IWR6843ODS, or IWR6843AOPEVM </br> (All require MMWAVEICBOOST Carrier Board) | [Hardware Setup for Flashing in MMWAVEICBOOST Mode](../hardware_guides/evm_setup_operational_modes.html)
+    IWR1443BOOST, IWR1642BOOST, or IWR1843BOOST | [Hardware Setup of IWRXXXXBOOST for Flashing Mode](../hardware_guides/evm_setup_operational_modes.html)
+
+    {{y Note: The IWR6843ISK, IWR6843ODS, IWR6843AOPEVM cannot be used in standalone mode for CCS debug mode. The MMWAVEICBOOST carrier board must be used to connect to the PC with the onboard XDS110.}}
+
+# 1. Flash the CSS debug firmware using Uniflash 
+
+    The debug binary is provided in the mmWave SDK. 
+    Flash the appropriate binary according to the instructions for [using UniFlash](using_uniflash_with_mmwave.html)
+     
+    Device |  BIN Name             | Location   
+    -------|-----------------------|------------------------------ 
+    IWR14XX | xwr14xx_ccsdebug.bin |`C:\ti\mmwave_sdk_<VER>\packages\ti\utils\ccsdebug`
+    IWR16XX | xwr16xx_ccsdebug.bin |`C:\ti\mmwave_sdk_<VER>\packages\ti\utils\ccsdebug`
+    IWR18XX | xwr18xx_ccsdebug.bin |`C:\ti\mmwave_sdk_<VER>\packages\ti\utils\ccsdebug`
+    IWR68xx or IWR68xx AOP | xwr68xx_ccsdebug.bin |`C:\ti\mmwave_sdk_<VER>\packages\ti\utils\ccsdebug`
+
+# 2. Setup the EVM for Functional Mode
+
+    Put the EVM in functional mode.
+
+    EVM   | Guide          
+    ------|--------------------------------------------------
+    IWR6843ISK, IWR6843ODS, or IWR6843AOPEVM +  MMWAVEICBOOST Carrier Board | [Hardware Setup of MMWAVEICBOOST + Antenna Module for Functional Mode](../hardware_guides/evm_setup_operational_modes.html)
+    IWR1443BOOST, IWR1642BOOST, or IWR1843BOOST | [Hardware Setup of IWRXXXXBOOST for Functional Mode](../hardware_guides/evm_setup_operational_modes.html)
+
+
+# 3. Connect the EVM to CCS using JTAG
+
+    ## 3.1 Create Target Configuration File (CCXML)
+        Creation of the CCXML file is needed for each device type, but only the first time CCS debug mode is used. In subsequent sessions, this step can be skipped and the existing CCXML file can be used directly. 
+
+          To create the CCXML file:  
+            1. Launch CCS
+            2. If CCS does not already show "Target Configurations" window, go to **View &rarr; Target Configurations**.
+            3. This will show the "Target Configurations" window, right click in the window and select "New Target Configuration"
+            4. Specify an appropriate file name (ex: IWR68xx.ccxml) for the particular EVM being used and check "Use shared location". Click **Finish**.
+            5. The configuration editor window will open.
+            6. In the window, select **Texas Instruments XDS110 USB Debug Probe** for Connection and select the appropriate mmWave device in the **Board or Device** text box.
+            7. Press the "Save" button to create and save the target configuration.
+            8. [Optional]: Press the "Test Connection" button to check the connection with the board.
+
+    ## 3.2 Connect to EVM using Target Configuration File and Load Binaries
+
+          * If needed, open the target configuration window by going to **View &rarr; Target Configurations**.
+          * Under **User Defined** configurations the target configuration file previously created should appear.
+          * Right click on the target configuration and select **Launch Select Configuration**. The target configuration will launch in the **Debug Window** and show all cores present on the device. The following images may vary slightly depending on device type.	
+          <img src="images/ccs/target_config.png" width="450"/>
+
+          * The necessary core(s) to connect to will depend on what is utilized by the demo code. This can be determined by examining which debug binaries are provided by the demo. 
+          The table below maps the file to the appropriate core. The demo may use only one or both.  
+         
+
+         Debug binary file extension | Connect and load to: 
+        ---------------|----------------
+        *.xer4f        | Cortex_R4_0
+        *.xe674        | C674X_0  
+          
+          * For each necessary core, select and right click on the to select **Connect Target**. An example is shown below. When connected, the message "(Disconnected: Unknown)" changes to "(Suspended)".  
+            <img src="images/ccs/connect_target.png" width="600"/>
+            
+          * For each debug binary, click on the appropriate core so that it is highlighted then click the **Load** button in the toolbar.  <img src="images/ccs/load_program_icon.png" width="40"/> 
+          In the **Load Program** dialog, press the **Browse Project** button. Select the debug binary listed in the demo user's guide, ensuring that the correct file is used for the core as listed in the table above. 
+          Press **Ok** until you are returned to the debug window. The program will now load. 
+          
+          Note: If the demo has _*.xer4f_ and _*.xe674_ binaries, complete the connect to target and load program steps for each core/binary.
+      
+    ## 3.3 Run	
+      
+          * For each core a binary was loaded to, select the core so that it is highlighted then press the **Run/Resume** button <img src="images/ccs/run_resume_icon.png" width="30"/>
+          * The program should start executing and generate console output. 
+
+        The systems is now setup for CCS debugging.   
+
+        <form>
+            <input type="button" value="Return to User's Guide." onClick="javascript:history.go(-1)" />
+        </form>
+
+# 4 Helpful CCS Debug Tips
+
+    ## 4.1 Group the debug cores
+
+        By grouping the R4F and DSP cores in CCS debug mode, it allows the user to connect or disconnect, load, and run programs simultaneously.
+          * After launching the target configuration, ctrl click on each core to highligh both. Then right click and choose 'Group Cores'. <br/>
+          <img src="images/ccs/group_cores.png" width="600"/>
+          * Now by selecting the 'Group 1' group (the name may change if there are multiple groups or can be manually renamed), the user can quickly connect, disconnect, run, and pause both cores simultaneously. <br/>
+          <img src="images/ccs/cores_are_grouped.png" width="600"/>
+      
+    ## 4.2 Reloading previous program files for faster resets
+
+        When debugging, users commonly need to break, check some values, then restart the program to check again without needing to actually re-build the program files. Because the device uses external memory to load the program, this often requires a full device reset using the NRESET button on the EVM itself. This can add time and cause frustration when debugging if the debug session must be relaunched and reloaded with every reset. However there are faster ways to do this.
+          * Group the R4F and DSP cores as indicated in the section above. Load and run the cores normally when first starting a new debug session.
+          * When a code reset is required (either after a breakpoint or error condition), follow the below sequence 
+            * Right click on the "Group 1" and select "Disconnect Target". This will disconnect CCS from both R4F and DSP cores at the same time.
+            * Press the NRESET button on the EVM to reset the device. (This assumes the CCS_debug image is loaded)
+            * Right click the "Group 1" and select "Connect Target". This will connect the debug session to both cores.
+            * Reload the previously loaded program file either using the drop down menu from the load button, selecting Run>Load>Reload Program from the task bar, or the keyboard shortcut "Ctrl+Alt+R". This will quickly reload the previously selected program files to both cores.
+            * With the "Group 1" selected, press the run file to run both cores together.
+          * Repeat the above step anytime a reset is required.
+          * The 'Reload Program' option can also be used between debug sessions if the user needs to exit and rebuild the code. However caution is advised as it is important to be sure CCS is reloading the correct file.
+
+        {{y Note: If the target is disconnected or reset while the debug session is still connected, it will often require a full restart of CCS on the PC. It is advised to always disconnect the cores before resetting the EVM.}}
+
+# Need More Help?
+
+    * For further tips on real-time debugging, consult ["Section 6.15. CCS Debugging of real time application" of the mmWave SDK](http://software-dl.ti.com/ra-processors/esd/MMWAVE-SDK/latest/exports/mmwave_sdk_user_guide.pdf)   
+    * For more information on the Code Composer Studio (CCS) debug environment consult ["Section 7. Debug" of the CCS User's Guide](http://software-dl.ti.com/ccs/esd/documents/users_guide/index_debug.html#debug)
+    * Search for your issue or post a new question on the [mmWave E2E forum](https://e2e.ti.com/support/sensor/mmwave_sensors/f/1023)
+
+
+</xmp>
+
+<link rel="stylesheet" href="../../.metadata/.html/scripts/highlight/styles/zenburn.css"/>
+<script src="../../.metadata/.html/scripts/strapdown/vendor/jquery-1.11.2.min.js"></script>
+<script src="../../.metadata/.html/scripts/strapdown/vendor/bootstrap.min.js"></script>
+<script src="../../.metadata/.html/scripts/highlight/highlight.pack.js"></script>
+<script src="../../.metadata/.html/scripts/strapdown/v/0.2/strapdown.js"></script>
+</html>
